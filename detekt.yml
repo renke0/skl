@@ -1,0 +1,28 @@
+# Default detekt configuration:
+# https://github.com/detekt/detekt/blob/v1.23.8/detekt-core/src/main/resources/default-detekt-config.yml
+formatting:
+  active: false
+
+complexity:
+  CyclomaticComplexMethod:
+    threshold: 10
+  TooManyFunctions:
+    thresholdInObjects: 30
+    thresholdInInterfaces: 30
+    thresholdInClasses: 30
+style:
+  AlsoCouldBeApply:
+    active: true
+  BracesOnIfStatements:
+    singleLine: never
+    multiLine: always
+  BracesOnWhenStatements:
+    singleLine: never
+    multiLine: always
+  MagicNumber:
+    active: false
+naming:
+  FunctionNaming:
+    functionPattern: "`?[a-z][a-zA-Z0-9]*`?"
+  MemberNameEqualsClassName:
+    active: false
