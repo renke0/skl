@@ -44,3 +44,11 @@ class WhereClause(private val expr: Expr) : SqlPart {
     expr.toSql(sb, ctx)
   }
 }
+
+enum class JoinType(val sql: String) {
+  INNER("INNER JOIN"),
+  LEFT("LEFT JOIN"),
+  RIGHT("RIGHT JOIN"),
+  FULL("FULL JOIN"),
+  CROSS("CROSS JOIN")
+}
