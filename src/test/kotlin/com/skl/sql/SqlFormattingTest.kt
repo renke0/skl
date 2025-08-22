@@ -1,7 +1,7 @@
 package com.skl.sql
 
 import com.skl.query.`as`
-import com.skl.query.from
+import com.skl.query.select
 import com.skl.test.Tables
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -14,9 +14,9 @@ class SqlFormattingTest {
   @Test
   fun `test pretty print formats SQL correctly`() {
     val q =
-        from { users `as` "us" }
+        select(users.firstName, orders.total)
+            .from { users `as` "us" }
             .join { orders on { users.id eq orders.userId } }
-            .select(users.firstName, orders.total)
             .where { orders.total gt 100.0 }
 
     val prettyPrinted = q.prettyPrint()
@@ -42,9 +42,9 @@ class SqlFormattingTest {
   @Test
   fun `test print and pretty print produce equivalent SQL`() {
     val q =
-        from { users }
+        select(users.firstName, orders.total)
+            .from { users }
             .leftJoin { orders on { users.id eq orders.userId } }
-            .select(users.firstName, orders.total)
             .toQuery()
 
     val printed = q.print()

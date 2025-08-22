@@ -12,14 +12,21 @@ import com.skl.sql.RenderContext
 import com.skl.sql.SelectClause
 import com.skl.sql.WhereClause
 
-class FromStep internal constructor(val table: Table, private val alias: String? = null) {
-  private val from
-    get() = FromClause(table, alias)
+class SelectStep internal constructor(fields: List<Field<*>>) {
+  private val select = SelectClause(fields)
 
-  fun `as`(alias: String): FromStep = FromStep(table, alias)
+  fun from(block: () -> Any): FromStep =
+      when (val result = block()) {
+        is AliasedTable -> FromStep(result.table, result.alias, select)
+        is Table -> FromStep(result, null, select)
+        else ->
+            error(
+                "from { ... } must return Table or AliasedTable, got: ${result::class.simpleName}",
+            )
+      }
+}
 
-  fun select(vararg fields: Field<*>): SelectStep = SelectStep(from, SelectClause(fields.toList()))
-
+interface Joinable {
   fun join(block: JoinBuilder.() -> JoinBuilder): JoinStep = joinStep(JoinType.INNER, block)
 
   fun leftJoin(block: JoinBuilder.() -> JoinBuilder): JoinStep = joinStep(JoinType.LEFT, block)
@@ -30,59 +37,43 @@ class FromStep internal constructor(val table: Table, private val alias: String?
 
   fun crossJoin(block: JoinBuilder.() -> JoinBuilder): JoinStep = joinStep(JoinType.CROSS, block)
 
-  private fun joinStep(type: JoinType, block: JoinBuilder.() -> JoinBuilder): JoinStep {
+  fun joinStep(type: JoinType, block: JoinBuilder.() -> JoinBuilder): JoinStep
+}
+
+class FromStep
+internal constructor(
+    private val table: Table,
+    private val alias: String?,
+    private val select: SelectClause
+) : Joinable {
+  private val from
+    get() = FromClause(table, alias)
+
+  fun where(block: () -> Expr): Query = Query(select, from, emptyList(), WhereClause(block()))
+
+  fun toQuery(): Query = Query(select, from)
+
+  override fun joinStep(type: JoinType, block: JoinBuilder.() -> JoinBuilder): JoinStep {
     val joinBuilder = JoinBuilder(type)
     val join = joinBuilder.block().build()
-    return JoinStep(from, listOf(join))
+    return JoinStep(from, select, listOf(join))
   }
 }
 
 class JoinStep
-internal constructor(private val from: FromClause, private val joins: List<JoinClause>) {
-  fun select(vararg fields: Field<*>): SelectStep =
-      SelectStep(from, SelectClause(fields.toList()), joins)
-
-  fun join(block: JoinBuilder.() -> JoinBuilder): JoinStep = joinStep(JoinType.INNER, block)
-
-  fun leftJoin(block: JoinBuilder.() -> JoinBuilder): JoinStep = joinStep(JoinType.LEFT, block)
-
-  fun rightJoin(block: JoinBuilder.() -> JoinBuilder): JoinStep = joinStep(JoinType.RIGHT, block)
-
-  fun fullJoin(block: JoinBuilder.() -> JoinBuilder): JoinStep = joinStep(JoinType.FULL, block)
-
-  fun crossJoin(block: JoinBuilder.() -> JoinBuilder): JoinStep = joinStep(JoinType.CROSS, block)
-
-  private fun joinStep(type: JoinType, block: JoinBuilder.() -> JoinBuilder): JoinStep {
-    val joinBuilder = JoinBuilder(type)
-    val join = joinBuilder.block().build()
-    return JoinStep(from, joins + join)
-  }
-}
-
-class SelectStep
 internal constructor(
     private val from: FromClause,
     private val select: SelectClause,
-    private val joins: List<JoinClause> = emptyList()
-) {
+    private val joins: List<JoinClause>
+) : Joinable {
   fun where(block: () -> Expr): Query = Query(select, from, joins, WhereClause(block()))
 
   fun toQuery(): Query = Query(select, from, joins)
 
-  fun join(block: JoinBuilder.() -> JoinBuilder): SelectStep = joinStep(JoinType.INNER, block)
-
-  fun leftJoin(block: JoinBuilder.() -> JoinBuilder): SelectStep = joinStep(JoinType.LEFT, block)
-
-  fun rightJoin(block: JoinBuilder.() -> JoinBuilder): SelectStep = joinStep(JoinType.RIGHT, block)
-
-  fun fullJoin(block: JoinBuilder.() -> JoinBuilder): SelectStep = joinStep(JoinType.FULL, block)
-
-  fun crossJoin(block: JoinBuilder.() -> JoinBuilder): SelectStep = joinStep(JoinType.CROSS, block)
-
-  private fun joinStep(type: JoinType, block: JoinBuilder.() -> JoinBuilder): SelectStep {
+  override fun joinStep(type: JoinType, block: JoinBuilder.() -> JoinBuilder): JoinStep {
     val joinBuilder = JoinBuilder(type)
     val join = joinBuilder.block().build()
-    return SelectStep(from, select, joins + join)
+    return JoinStep(from, select, joins + join)
   }
 }
 
@@ -108,26 +99,18 @@ data class Query(
     return sb.toString()
   }
 
-  fun prettyPrint(): String {
-    return SqlFormatter.of(Dialect.TSql)
-        .format(
-            print(),
-            FormatConfig.builder()
-                .maxColumnLength(120)
-                .indent("  ")
-                .uppercase(true)
-                .linesBetweenQueries(2)
-                .build(),
-        )
-  }
+  fun prettyPrint(): String =
+      SqlFormatter.of(Dialect.TSql)
+          .format(
+              print(),
+              FormatConfig.builder()
+                  .maxColumnLength(120)
+                  .indent("  ")
+                  .uppercase(true)
+                  .linesBetweenQueries(2)
+                  .build(),
+          )
 }
 
-// Entry point: from { table } or from { table `as` "alias" }
-fun from(block: () -> Any): FromStep {
-  return when (val result = block()) {
-    is AliasedTable -> FromStep(result.table, result.alias)
-    is Table -> FromStep(result)
-    else ->
-        error("from { ... } must return Table or AliasedTable, got: ${result::class.simpleName}")
-  }
-}
+// Entry point: select(col1, col2)
+fun select(vararg fields: Field<*>): SelectStep = SelectStep(fields.toList())

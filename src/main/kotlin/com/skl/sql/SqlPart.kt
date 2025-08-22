@@ -8,7 +8,7 @@ interface SqlPart {
   fun appendTo(sb: StringBuilder, ctx: RenderContext)
 }
 
-class SelectClause(private val fields: List<Field<*>>) : SqlPart {
+class SelectClause(val fields: List<Field<*>>) : SqlPart {
   override fun appendTo(sb: StringBuilder, ctx: RenderContext) {
     sb.append("SELECT ")
     if (fields.isEmpty()) sb.append("*") else sb.append(fields.joinToString(", ") { it.fq(ctx) })
@@ -38,10 +38,10 @@ class JoinClause(
   }
 }
 
-class WhereClause(private val expr: Expr) : SqlPart {
+class WhereClause(val expression: Expr) : SqlPart {
   override fun appendTo(sb: StringBuilder, ctx: RenderContext) {
     sb.append(" WHERE ")
-    expr.toSql(sb, ctx)
+    expression.toSql(sb, ctx)
   }
 }
 
