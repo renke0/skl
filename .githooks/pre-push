@@ -1,11 +1,11 @@
 #!/bin/sh
 
-echo "Running tests before push..."
-./gradlew test
+echo "Running checks before push..."
+./gradlew detekt test
 
 if [ $? -ne 0 ]; then
-  echo "Tests failed, push aborted"
+  echo "Checks failed, push aborted"
   exit 1
 fi
 
-echo "All tests passed, proceeding with push"
+echo "All checks passed, proceeding with push"

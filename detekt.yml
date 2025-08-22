@@ -19,6 +19,9 @@ style:
   BracesOnWhenStatements:
     singleLine: never
     multiLine: always
+  ExpressionBodySyntax:
+    active: true
+    includeLineWrapping: true
   MagicNumber:
     active: false
 naming:
