@@ -16,36 +16,18 @@ interface BooleanExprOps {
 sealed interface Expr : BooleanExprOps {
   fun toSql(sb: StringBuilder, ctx: RenderContext)
 
-  data class Equal(val left: Operand.FieldRef, val right: Operand) : Expr {
-    override fun toSql(sb: StringBuilder, ctx: RenderContext) {
-      val col = left.field.fq(ctx)
-      when (right) {
-        is Operand.Named -> {
-          sb.append(col).append(" = @").append(right.name)
-        }
-
-        is Operand.Literal -> {
-          val v = right.value
-          if (v == null) {
-            sb.append(col).append(" IS NULL")
-          } else {
-            sb.append(col).append(" = ").append(sqlLiteral(v))
-          }
-        }
-
-        is Operand.FieldRef -> {
-          sb.append(col).append(" = ").append(right.field.fq(ctx))
-        }
-
-        else -> error("Only named params, literals, or field references are supported")
-      }
-    }
-  }
-
   data class And(val left: Expr, val right: Expr) : Expr {
     override fun toSql(sb: StringBuilder, ctx: RenderContext) {
       left.toSql(sb, ctx)
       sb.append(" AND ")
+      right.toSql(sb, ctx)
+    }
+  }
+
+  data class Or(val left: Expr, val right: Expr) : Expr {
+    override fun toSql(sb: StringBuilder, ctx: RenderContext) {
+      left.toSql(sb, ctx)
+      sb.append(" OR ")
       right.toSql(sb, ctx)
     }
   }
@@ -58,7 +40,27 @@ sealed interface Expr : BooleanExprOps {
     }
   }
 
-  data class NotEqual(val left: Operand.FieldRef, val right: Operand) : Expr {
+  data class Eq(val left: Operand.FieldRef, val right: Operand) : Expr {
+    override fun toSql(sb: StringBuilder, ctx: RenderContext) {
+      val col = left.field.fq(ctx)
+      when (right) {
+        is Operand.Named -> sb.append(col).append(" = @").append(right.name)
+
+        is Operand.Literal -> {
+          if (right.value == null) {
+            sb.append(col).append(" IS NULL")
+          } else {
+            sb.append(col).append(" = ").append(sqlLiteral(right.value))
+          }
+        }
+
+        is Operand.FieldRef -> sb.append(col).append(" = ").append(right.field.fq(ctx))
+        else -> error("Only named params, literals, or field references are supported")
+      }
+    }
+  }
+
+  data class Ne(val left: Operand.FieldRef, val right: Operand) : Expr {
     override fun toSql(sb: StringBuilder, ctx: RenderContext) {
       val col = left.field.fq(ctx)
       when (right) {
@@ -74,7 +76,7 @@ sealed interface Expr : BooleanExprOps {
     }
   }
 
-  data class GreaterThan(val left: Operand.FieldRef, val right: Operand) : Expr {
+  data class Gt(val left: Operand.FieldRef, val right: Operand) : Expr {
     override fun toSql(sb: StringBuilder, ctx: RenderContext) {
       val col = left.field.fq(ctx)
       when (right) {
@@ -86,7 +88,7 @@ sealed interface Expr : BooleanExprOps {
     }
   }
 
-  data class GreaterOrEqual(val left: Operand.FieldRef, val right: Operand) : Expr {
+  data class Ge(val left: Operand.FieldRef, val right: Operand) : Expr {
     override fun toSql(sb: StringBuilder, ctx: RenderContext) {
       val col = left.field.fq(ctx)
       when (right) {
@@ -98,7 +100,7 @@ sealed interface Expr : BooleanExprOps {
     }
   }
 
-  data class LesserThan(val left: Operand.FieldRef, val right: Operand) : Expr {
+  data class Lt(val left: Operand.FieldRef, val right: Operand) : Expr {
     override fun toSql(sb: StringBuilder, ctx: RenderContext) {
       val col = left.field.fq(ctx)
       when (right) {
@@ -110,7 +112,7 @@ sealed interface Expr : BooleanExprOps {
     }
   }
 
-  data class LesserOrEqual(val left: Operand.FieldRef, val right: Operand) : Expr {
+  data class Le(val left: Operand.FieldRef, val right: Operand) : Expr {
     override fun toSql(sb: StringBuilder, ctx: RenderContext) {
       val col = left.field.fq(ctx)
       when (right) {
@@ -147,7 +149,6 @@ sealed interface Expr : BooleanExprOps {
         is Operand.Named -> sb.append(col).append(" LIKE @").append(pattern.name)
         is Operand.Literal ->
             sb.append(col).append(" LIKE ").append(sqlNonNullLiteral(pattern.value))
-
         else -> error("LIKE supports named or literal patterns only")
       }
     }
@@ -192,14 +193,6 @@ sealed interface Expr : BooleanExprOps {
         else -> error("NOT IN expects NamedList or LiteralList")
       }
       sb.append(")")
-    }
-  }
-
-  data class Or(val left: Expr, val right: Expr) : Expr {
-    override fun toSql(sb: StringBuilder, ctx: RenderContext) {
-      left.toSql(sb, ctx)
-      sb.append(" OR ")
-      right.toSql(sb, ctx)
     }
   }
 }

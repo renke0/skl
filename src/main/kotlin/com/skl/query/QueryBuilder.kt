@@ -86,8 +86,7 @@ internal constructor(
   }
 }
 
-data class Query
-internal constructor(
+data class Query(
     private val select: SelectClause,
     private val from: FromClause,
     private val joins: List<JoinClause> = emptyList(),

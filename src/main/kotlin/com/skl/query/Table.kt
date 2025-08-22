@@ -9,5 +9,4 @@ open class Table(val name: String) : FromSource {
 // Aliased table implementation
 data class AliasedTable(val table: Table, val alias: String) : FromSource
 
-@Suppress("FunctionName")
 infix fun Table.`as`(alias: String): AliasedTable = AliasedTable(this, alias)

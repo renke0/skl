@@ -4,7 +4,7 @@ plugins {
   kotlin("jvm") version "2.1.10"
   id("com.diffplug.spotless") version "7.2.1"
   id("io.gitlab.arturbosch.detekt") version "1.23.5"
-  id("jacoco")
+  id("org.jetbrains.kotlinx.kover") version "0.9.1"
 }
 
 group = "com.skl"
@@ -49,21 +49,6 @@ tasks.withType<Detekt>().configureEach {
     txt.required.set(true)
     sarif.required.set(true)
   }
-}
-
-tasks.test { finalizedBy(tasks.jacocoTestReport) }
-
-tasks.jacocoTestReport {
-  dependsOn(tasks.test)
-  reports {
-    xml.required.set(true)
-    html.required.set(true)
-  }
-}
-
-tasks.jacocoTestCoverageVerification {
-  dependsOn(tasks.jacocoTestReport)
-  violationRules { rule { limit { minimum = "0.75".toBigDecimal() } } }
 }
 
 tasks.register("installGitHooks") {
