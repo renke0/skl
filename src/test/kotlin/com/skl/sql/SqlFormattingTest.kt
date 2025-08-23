@@ -1,6 +1,5 @@
 package com.skl.sql
 
-import com.skl.query.`as`
 import com.skl.query.select
 import com.skl.test.Tables
 import kotlin.test.Test

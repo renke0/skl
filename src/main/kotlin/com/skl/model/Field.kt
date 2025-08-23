@@ -2,9 +2,9 @@ package com.skl.model
 
 import com.skl.expr.Expr
 import com.skl.expr.Operand
+import com.skl.query.Selectable
 import com.skl.query.Table
 import com.skl.sql.RenderContext
-import com.skl.sql.SelectableElement
 
 @Suppress("detekt:complexity:TooManyFunctions")
 interface FieldOps<T> {
@@ -19,13 +19,14 @@ interface FieldOps<T> {
 
   infix fun <R> eq(field: Field<R>): Expr = Expr.Eq(Operand.FieldRef(f), Operand.FieldRef(field))
 
-  // inequality & comparisons
+  // inequality
   infix fun ne(value: T): Expr = Expr.Ne(Operand.FieldRef(f), Operand.Literal(value))
 
   infix fun ne(named: Operand.Named): Expr = Expr.Ne(Operand.FieldRef(f), named)
 
   infix fun <R> ne(field: Field<R>): Expr = Expr.Ne(Operand.FieldRef(f), Operand.FieldRef(field))
 
+  // comparisons
   infix fun gt(value: T): Expr = Expr.Gt(Operand.FieldRef(f), Operand.Literal(value))
 
   infix fun gt(named: Operand.Named): Expr = Expr.Gt(Operand.FieldRef(f), named)
@@ -86,6 +87,6 @@ interface FieldOps<T> {
       Expr.NotInList(Operand.FieldRef(f), namedList)
 }
 
-data class Field<T>(val table: Table, val name: String) : FieldOps<T>, SelectableElement {
+data class Field<T>(val table: Table, val name: String) : FieldOps<T>, Selectable {
   fun fq(ctx: RenderContext): String = "${ctx.nameFor(table)}.${name}"
 }
