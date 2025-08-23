@@ -1,13 +1,11 @@
 package com.skl.query
 
 import com.skl.model.Field
-import com.skl.sql.SelectableElement
 
-open class Table(val name: String) : SelectableElement {
+open class Table(val name: String) : Selectable {
   protected fun <T> field(column: String): Field<T> = Field(this, column)
+
+  infix fun `as`(alias: String): AliasedTable = AliasedTable(this, alias)
 }
 
-// Aliased table implementation
 data class AliasedTable(val table: Table, val alias: String)
-
-infix fun Table.`as`(alias: String): AliasedTable = AliasedTable(this, alias)

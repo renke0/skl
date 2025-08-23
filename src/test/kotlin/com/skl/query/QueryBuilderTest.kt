@@ -1,7 +1,7 @@
 package com.skl.query
 
 import com.skl.expr.param
-import com.skl.sql.STAR
+import com.skl.query.Selectable.STAR
 import com.skl.test.Tables
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -41,7 +41,7 @@ class QueryBuilderTest {
             .join { orders on { users.id eq orders.userId } }
             .toQuery()
     val expectedSql =
-        "SELECT users.*, orders.id, * FROM users INNER JOIN orders ON users.id = orders.user_id"
+        "SELECT users.*, orders.id, * FROM users JOIN orders ON users.id = orders.user_id"
     assertEquals(expectedSql, q.print())
   }
 
@@ -74,7 +74,22 @@ class QueryBuilderTest {
     val expectedSql =
         "SELECT us.first_name, orders.total " +
             "FROM users us " +
-            "INNER JOIN orders ON us.id = orders.user_id WHERE orders.total > 100.0"
+            "JOIN orders ON us.id = orders.user_id WHERE orders.total > 100.0"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
+  fun `test inner join query`() {
+    val q =
+        select(users.firstName, orders.total)
+            .from { users `as` "us" }
+            .innerJoin { orders on { users.id eq orders.userId } }
+            .toQuery()
+
+    val expectedSql =
+        "SELECT us.first_name, orders.total " +
+            "FROM users us " +
+            "INNER JOIN orders ON us.id = orders.user_id"
     assertEquals(expectedSql, q.print())
   }
 
@@ -94,11 +109,54 @@ class QueryBuilderTest {
   }
 
   @Test
+  fun `test right join query`() {
+    val q =
+        select(users.firstName, orders.total)
+            .from { users `as` "us" }
+            .rightJoin { orders on { users.id eq orders.userId } }
+            .toQuery()
+
+    val expectedSql =
+        "SELECT us.first_name, orders.total " +
+            "FROM users us " +
+            "RIGHT JOIN orders ON us.id = orders.user_id"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
+  fun `test full join query`() {
+    val q =
+        select(users.firstName, orders.total)
+            .from { users `as` "us" }
+            .fullJoin { orders on { users.id eq orders.userId } }
+            .toQuery()
+
+    val expectedSql =
+        "SELECT us.first_name, orders.total " +
+            "FROM users us " +
+            "FULL JOIN orders ON us.id = orders.user_id"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
+  fun `test cross join query`() {
+    val q =
+        select(users.firstName, orders.total)
+            .from { users `as` "us" }
+            .crossJoin { orders() }
+            .toQuery()
+
+    val expectedSql = "SELECT us.first_name, orders.total " + "FROM users us " + "CROSS JOIN orders"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
   fun `test multiple joins query`() {
     val q =
         select(users.firstName, orders.total, products.productName, orderItems.quantity)
             .from { users }
             .join { orders on { users.id eq orders.userId } }
+            .innerJoin { orders on { users.id eq orders.userId } }
             .leftJoin { orderItems on { orders.id eq orderItems.orderId } }
             .rightJoin { products on { orderItems.productId eq products.id } }
             .fullJoin { users on { users.id eq orders.id } }
@@ -108,6 +166,7 @@ class QueryBuilderTest {
     val expectedSql =
         "SELECT users.first_name, orders.total, products.name, order_items.quantity " +
             "FROM users " +
+            "JOIN orders ON users.id = orders.user_id " +
             "INNER JOIN orders ON users.id = orders.user_id " +
             "LEFT JOIN order_items ON orders.id = order_items.order_id " +
             "RIGHT JOIN products ON order_items.product_id = products.id " +
