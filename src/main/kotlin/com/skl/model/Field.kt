@@ -4,6 +4,7 @@ import com.skl.expr.Expr
 import com.skl.expr.Operand
 import com.skl.query.Table
 import com.skl.sql.RenderContext
+import com.skl.sql.SelectableElement
 
 @Suppress("detekt:complexity:TooManyFunctions")
 interface FieldOps<T> {
@@ -85,6 +86,6 @@ interface FieldOps<T> {
       Expr.NotInList(Operand.FieldRef(f), namedList)
 }
 
-data class Field<T>(val table: Table, val name: String) : FieldOps<T> {
+data class Field<T>(val table: Table, val name: String) : FieldOps<T>, SelectableElement {
   fun fq(ctx: RenderContext): String = "${ctx.nameFor(table)}.${name}"
 }

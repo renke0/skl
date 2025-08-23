@@ -9,11 +9,14 @@ import com.skl.sql.FromClause
 import com.skl.sql.JoinClause
 import com.skl.sql.JoinType
 import com.skl.sql.RenderContext
+import com.skl.sql.STAR
 import com.skl.sql.SelectClause
+import com.skl.sql.SelectItem
+import com.skl.sql.SelectableElement
 import com.skl.sql.WhereClause
 
-class SelectStep internal constructor(fields: List<Field<*>>) {
-  private val select = SelectClause(fields)
+class SelectStep internal constructor(items: List<SelectItem>) {
+  private val select = SelectClause(items)
 
   fun from(block: () -> Any): FromStep =
       when (val result = block()) {
@@ -112,5 +115,22 @@ data class Query(
           )
 }
 
-// Entry point: select(col1, col2)
-fun select(vararg fields: Field<*>): SelectStep = SelectStep(fields.toList())
+// Entry point: select(col1, col2, table, STAR)
+fun select(vararg items: SelectableElement): SelectStep {
+  val selectItems =
+      when {
+        items.isEmpty() -> listOf(SelectItem.AllFields)
+        else ->
+            items.map { item ->
+              when (item) {
+                is Field<*> -> SelectItem.FieldItem(item)
+                is Table -> SelectItem.TableAllFields(item)
+                is STAR -> SelectItem.AllFields
+                else ->
+                    error(
+                        "Select items must be Field, Table, or STAR, got: ${item::class.simpleName}")
+              }
+            }
+      }
+  return SelectStep(selectItems)
+}

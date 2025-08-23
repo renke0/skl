@@ -10,6 +10,16 @@ complexity:
     thresholdInObjects: 30
     thresholdInInterfaces: 30
     thresholdInClasses: 30
+exceptions:
+  NotImplementedDeclaration:
+    active: true
+  ObjectExtendsThrowable:
+    active: true
+naming:
+  FunctionNaming:
+    functionPattern: "`?[a-z][a-zA-Z0-9]*`?"
+  MemberNameEqualsClassName:
+    active: false
 style:
   AlsoCouldBeApply:
     active: true
@@ -23,9 +33,4 @@ style:
     active: true
     includeLineWrapping: true
   MagicNumber:
-    active: false
-naming:
-  FunctionNaming:
-    functionPattern: "`?[a-z][a-zA-Z0-9]*`?"
-  MemberNameEqualsClassName:
     active: false
