@@ -8,10 +8,36 @@ interface SqlPart {
   fun appendTo(sb: StringBuilder, ctx: RenderContext)
 }
 
-class SelectClause(val fields: List<Field<*>>) : SqlPart {
+interface SelectableElement
+
+object STAR : SelectableElement {
+  override fun toString(): String = "*"
+}
+
+sealed class SelectItem {
+  abstract fun toSql(ctx: RenderContext): String
+
+  data class FieldItem(val field: Field<*>) : SelectItem() {
+    override fun toSql(ctx: RenderContext): String = field.fq(ctx)
+  }
+
+  data class TableAllFields(val table: Table) : SelectItem() {
+    override fun toSql(ctx: RenderContext): String = "${ctx.nameFor(table)}.*"
+  }
+
+  data object AllFields : SelectItem() {
+    override fun toSql(ctx: RenderContext): String = "*"
+  }
+}
+
+class SelectClause(val items: List<SelectItem>) : SqlPart {
   override fun appendTo(sb: StringBuilder, ctx: RenderContext) {
     sb.append("SELECT ")
-    if (fields.isEmpty()) sb.append("*") else sb.append(fields.joinToString(", ") { it.fq(ctx) })
+    if (items.isEmpty()) {
+      sb.append("*")
+    } else {
+      sb.append(items.joinToString(", ") { it.toSql(ctx) })
+    }
   }
 }
 

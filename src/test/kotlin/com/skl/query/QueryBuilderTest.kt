@@ -1,6 +1,7 @@
 package com.skl.query
 
 import com.skl.expr.param
+import com.skl.sql.STAR
 import com.skl.test.Tables
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -10,6 +11,39 @@ class QueryBuilderTest {
   private val orders = Tables.Orders()
   private val products = Tables.Products()
   private val orderItems = Tables.OrderItems()
+
+  @Test
+  fun `test select star with no params`() {
+    val q = select().from { users }.toQuery()
+    val expectedSql = "SELECT * FROM users"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
+  fun `test select star with star param`() {
+    val q = select(STAR).from { users }.toQuery()
+    val expectedSql = "SELECT * FROM users"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
+  fun `test select all fields from table`() {
+    val q = select(users).from { users }.toQuery()
+    val expectedSql = "SELECT users.* FROM users"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
+  fun `test select mixed fields and tables`() {
+    val q =
+        select(users, orders.id, STAR)
+            .from { users }
+            .join { orders on { users.id eq orders.userId } }
+            .toQuery()
+    val expectedSql =
+        "SELECT users.*, orders.id, * FROM users INNER JOIN orders ON users.id = orders.user_id"
+    assertEquals(expectedSql, q.print())
+  }
 
   @Test
   fun `test basic query`() {
