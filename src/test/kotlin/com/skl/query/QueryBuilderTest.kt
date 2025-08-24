@@ -55,6 +55,7 @@ class QueryBuilderTest {
                   (users.age eq param("age")) and
                   (users.age eq 18)
             }
+            .toQuery()
 
     val expectedSql =
         "SELECT us.first_name, us.age " +
@@ -70,6 +71,7 @@ class QueryBuilderTest {
             .from { users `as` "us" }
             .join { orders on { users.id eq orders.userId } }
             .where { orders.total gt 100.0 }
+            .toQuery()
 
     val expectedSql =
         "SELECT us.first_name, orders.total " +
@@ -172,6 +174,107 @@ class QueryBuilderTest {
             "RIGHT JOIN products ON order_items.product_id = products.id " +
             "FULL JOIN users ON users.id = orders.id " +
             "CROSS JOIN orders"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
+  fun `test group by clause`() {
+    val q = select(users.age, users.id).from { users }.groupBy(users.age).toQuery()
+
+    val expectedSql = "SELECT users.age, users.id " + "FROM users " + "GROUP BY users.age"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
+  fun `test group by with where clause`() {
+    val q =
+        select(users.age, users.id)
+            .from { users }
+            .where { users.age gt 18 }
+            .groupBy(users.age)
+            .toQuery()
+
+    val expectedSql =
+        "SELECT users.age, users.id " +
+            "FROM users " +
+            "WHERE users.age > 18 " +
+            "GROUP BY users.age"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
+  fun `test having clause`() {
+    val q =
+        select(users.age, users.id)
+            .from { users }
+            .groupBy(users.age)
+            .having { users.id gt 1 }
+            .toQuery()
+
+    val expectedSql =
+        "SELECT users.age, users.id " +
+            "FROM users " +
+            "GROUP BY users.age " +
+            "HAVING users.id > 1"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
+  fun `test order by clause`() {
+    val q =
+        select(users.firstName, users.age)
+            .from { users }
+            .orderBy(users.age, users.firstName)
+            .toQuery()
+
+    val expectedSql =
+        "SELECT users.first_name, users.age " +
+            "FROM users " +
+            "ORDER BY users.age, users.first_name"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
+  fun `test group by having and order by clauses`() {
+    val q =
+        select(users.age, users.id)
+            .from { users }
+            .where { users.firstName like "J%" }
+            .groupBy(users.age)
+            .having { users.id gt 1 }
+            .orderBy(users.age)
+            .toQuery()
+
+    val expectedSql =
+        "SELECT users.age, users.id " +
+            "FROM users " +
+            "WHERE users.first_name LIKE 'J%' " +
+            "GROUP BY users.age " +
+            "HAVING users.id > 1 " +
+            "ORDER BY users.age"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
+  fun `test join with group by having and order by clauses`() {
+    val q =
+        select(users.age, users.id, orders.total)
+            .from { users }
+            .join { orders on { users.id eq orders.userId } }
+            .where { orders.total gt 100.0 }
+            .groupBy(users.age, orders.total)
+            .having { users.id gt 1 }
+            .orderBy(users.age, orders.total)
+            .toQuery()
+
+    val expectedSql =
+        "SELECT users.age, users.id, orders.total " +
+            "FROM users " +
+            "JOIN orders ON users.id = orders.user_id " +
+            "WHERE orders.total > 100.0 " +
+            "GROUP BY users.age, orders.total " +
+            "HAVING users.id > 1 " +
+            "ORDER BY users.age, orders.total"
     assertEquals(expectedSql, q.print())
   }
 }

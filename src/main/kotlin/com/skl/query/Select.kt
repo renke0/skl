@@ -1,34 +1,32 @@
 package com.skl.query
 
+import com.skl.model.AliasedTable
 import com.skl.model.Field
+import com.skl.model.Table
 import com.skl.query.Selectable.STAR
 import com.skl.sql.RenderContext
 
-class Select {
-  class Clause(val items: List<SelectItem>) : BaseClause {
-    override fun appendTo(sb: StringBuilder, ctx: RenderContext) {
-      sb.append("SELECT ")
-      if (items.isEmpty()) {
-        sb.append("*")
-      } else {
-        sb.append(items.joinToString(", ") { it.toSql(ctx) })
-      }
+class SelectClause(val items: List<SelectItem>) : QueryClause {
+  override fun appendTo(sb: StringBuilder, ctx: RenderContext) {
+    sb.append("SELECT ")
+    if (items.isEmpty()) {
+      sb.append("*")
+    } else {
+      sb.append(items.joinToString(", ") { it.toSql(ctx) })
     }
   }
+}
 
-  class Step internal constructor(items: List<SelectItem>) {
-    private val select = Clause(items)
-
-    fun from(block: () -> Any): From.Step =
-        when (val result = block()) {
-          is AliasedTable -> From.Step(result.table, result.alias, select)
-          is Table -> From.Step(result, null, select)
-          else ->
-              error(
-                  "from { ... } must return Table or AliasedTable, got: ${result::class.simpleName}",
-              )
-        }
-  }
+class SelectStep internal constructor(val context: QueryContext) {
+  fun from(block: () -> Any): FromStep =
+      when (val result = block()) {
+        is AliasedTable -> context.from(FromClause(result.table, result.alias))
+        is Table -> context.from(FromClause(result))
+        else ->
+            error(
+                "from { ... } must return Table or AliasedTable, got: ${result::class.simpleName}",
+            )
+      }
 }
 
 interface Selectable {
@@ -53,7 +51,7 @@ sealed class SelectItem {
   }
 }
 
-fun select(vararg items: Selectable): Select.Step {
+fun select(vararg items: Selectable): SelectStep {
   val selectItems =
       when {
         items.isEmpty() -> listOf(SelectItem.AllFields)
@@ -70,5 +68,5 @@ fun select(vararg items: Selectable): Select.Step {
               }
             }
       }
-  return Select.Step(selectItems)
+  return QueryContext.select(SelectClause(selectItems))
 }

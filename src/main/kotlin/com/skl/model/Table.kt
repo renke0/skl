@@ -1,6 +1,6 @@
-package com.skl.query
+package com.skl.model
 
-import com.skl.model.Field
+import com.skl.query.Selectable
 
 open class Table(val name: String) : Selectable {
   protected fun <T> field(column: String): Field<T> = Field(this, column)
