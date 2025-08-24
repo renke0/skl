@@ -1,6 +1,6 @@
 package com.skl.test
 
-import com.skl.query.Table
+import com.skl.model.Table
 
 object Tables {
   class Users : Table("users") {

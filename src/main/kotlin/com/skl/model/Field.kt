@@ -3,7 +3,6 @@ package com.skl.model
 import com.skl.expr.Expr
 import com.skl.expr.Operand
 import com.skl.query.Selectable
-import com.skl.query.Table
 import com.skl.sql.RenderContext
 
 @Suppress("detekt:complexity:TooManyFunctions")

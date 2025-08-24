@@ -17,6 +17,7 @@ class SqlFormattingTest {
             .from { users `as` "us" }
             .join { orders on { users.id eq orders.userId } }
             .where { orders.total gt 100.0 }
+            .toQuery()
 
     val prettyPrinted = q.prettyPrint()
 

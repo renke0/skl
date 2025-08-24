@@ -1,6 +1,6 @@
 package com.skl.sql
 
-import com.skl.query.Table
+import com.skl.model.Table
 
 // Rendering context to resolve table names (original or alias)
 class RenderContext(private val aliases: Map<Table, String> = emptyMap()) {
