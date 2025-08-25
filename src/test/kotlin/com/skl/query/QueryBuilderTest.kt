@@ -277,4 +277,40 @@ class QueryBuilderTest {
             "ORDER BY users.age, orders.total"
     assertEquals(expectedSql, q.print())
   }
+
+  @Test
+  fun `test limit clause`() {
+    val q = select(users.firstName, users.age).from { users }.limit(10).toQuery()
+
+    val expectedSql = "SELECT users.first_name, users.age " + "FROM users " + "LIMIT 10"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
+  fun `test offset clause`() {
+    val q = select(users.firstName, users.age).from { users }.limit(10).offset(5).toQuery()
+
+    val expectedSql =
+        "SELECT users.first_name, users.age " + "FROM users " + "LIMIT 10 " + "OFFSET 5"
+    assertEquals(expectedSql, q.print())
+  }
+
+  @Test
+  fun `test order by with limit and offset clauses`() {
+    val q =
+        select(users.firstName, users.age)
+            .from { users }
+            .orderBy(users.age)
+            .limit(10)
+            .offset(5)
+            .toQuery()
+
+    val expectedSql =
+        "SELECT users.first_name, users.age " +
+            "FROM users " +
+            "ORDER BY users.age " +
+            "LIMIT 10 " +
+            "OFFSET 5"
+    assertEquals(expectedSql, q.print())
+  }
 }

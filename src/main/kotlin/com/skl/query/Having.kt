@@ -10,7 +10,8 @@ class HavingClause(val expression: Expr) : QueryClause {
   }
 }
 
-class HavingStep internal constructor(override val context: QueryContext) : OrderBySupport
+class HavingStep internal constructor(override val context: QueryContext) :
+    OrderBySupport, LimitSupport
 
 interface HavingSupport : QuerySupport {
   fun having(block: () -> Expr): HavingStep = context.having(HavingClause(block()))

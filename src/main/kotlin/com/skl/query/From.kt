@@ -13,4 +13,4 @@ class FromClause(val table: Table, val alias: String? = null) : QueryClause {
 class FromStep
 internal constructor(
     override val context: QueryContext,
-) : JoinSupport, WhereSupport, GroupBySupport, OrderBySupport
+) : JoinSupport, WhereSupport, GroupBySupport, OrderBySupport, LimitSupport

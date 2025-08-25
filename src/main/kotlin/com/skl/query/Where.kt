@@ -11,7 +11,7 @@ class WhereClause(val expression: Expr) : QueryClause {
 }
 
 class WhereStep internal constructor(override val context: QueryContext) :
-    GroupBySupport, OrderBySupport
+    GroupBySupport, OrderBySupport, LimitSupport
 
 interface WhereSupport : QuerySupport {
   fun where(block: () -> Expr): WhereStep = context.where(WhereClause(block()))
