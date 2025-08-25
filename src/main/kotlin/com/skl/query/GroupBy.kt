@@ -12,7 +12,7 @@ class GroupByClause(val fields: List<Field<*>>) : QueryClause {
 }
 
 class GroupByStep internal constructor(override val context: QueryContext) :
-    OrderBySupport, HavingSupport
+    OrderBySupport, HavingSupport, LimitSupport
 
 interface GroupBySupport : QuerySupport {
   fun groupBy(vararg fields: Field<*>): GroupByStep =

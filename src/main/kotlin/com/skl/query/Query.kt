@@ -23,6 +23,8 @@ class Query(private val context: QueryContext) {
       groupBy?.appendTo(sb, ctx)
       having?.appendTo(sb, ctx)
       orderBy?.appendTo(sb, ctx)
+      limit?.appendTo(sb, ctx)
+      offset?.appendTo(sb, ctx)
       return sb.toString()
     }
   }
@@ -47,7 +49,9 @@ internal data class Parts(
     val where: WhereClause? = null,
     val groupBy: GroupByClause? = null,
     val having: HavingClause? = null,
-    val orderBy: OrderByClause? = null
+    val orderBy: OrderByClause? = null,
+    val limit: LimitClause? = null,
+    val offset: OffsetClause? = null
 )
 
 class QueryContext private constructor(select: SelectClause) {
@@ -95,6 +99,18 @@ class QueryContext private constructor(select: SelectClause) {
     check(parts.orderBy == null) { "ORDER BY clause is already defined" }
     parts = parts.copy(orderBy = clause)
     return OrderByStep(this)
+  }
+
+  fun limit(clause: LimitClause): LimitStep {
+    check(parts.limit == null) { "LIMIT clause is already defined" }
+    parts = parts.copy(limit = clause)
+    return LimitStep(this)
+  }
+
+  fun offset(clause: OffsetClause): OffsetStep {
+    check(parts.offset == null) { "OFFSET clause is already defined" }
+    parts = parts.copy(offset = clause)
+    return OffsetStep(this)
   }
 }
 

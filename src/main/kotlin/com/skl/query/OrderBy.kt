@@ -11,7 +11,8 @@ class OrderByClause(val fields: List<Field<*>>) : QueryClause {
   }
 }
 
-class OrderByStep internal constructor(override val context: QueryContext) : QuerySupport
+class OrderByStep internal constructor(override val context: QueryContext) :
+    QuerySupport, LimitSupport
 
 interface OrderBySupport : QuerySupport {
   fun orderBy(vararg fields: Field<*>): OrderByStep =
