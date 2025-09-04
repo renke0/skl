@@ -11,19 +11,19 @@ import com.skl.vendor.Vendor
 
 class Query(private val context: QueryContext) {
   fun print(): String {
-    with(context.parts) {
+    with(context.clauses) {
       val aliases = collectAliases()
 
       val ctx = RenderContext(aliases, context)
       val sb = QueryStringBuilder(ctx)
 
-      val clauses =
+      val orderedClauses =
           listOf(select, from)
               .plus(joins)
               .plus(listOf(where, groupBy, having, orderBy, limit, offset))
               .filterNotNull()
 
-      return sb.printList(clauses, separator = " ").build()
+      return sb.printList(orderedClauses, separator = " ").build()
     }
   }
 
@@ -41,15 +41,15 @@ class Query(private val context: QueryContext) {
           )
 
   private fun collectAliases(): List<Pair<TableLike, String>> =
-      context.parts.let {
-        listOf(it.from?.source)
-            .plus(it.joins.map { join -> join.source })
-            .filterIsInstance<FromAliasedTable>()
-            .map { from -> from.aliasedTable.table to from.aliasedTable.alias }
+      context.clauses.let {
+        listOf(it.from?.expression)
+            .plus(it.joins.map { join -> join.expression })
+            .filterIsInstance<AliasedTable<*>>()
+            .map { from -> from.table to from.alias }
       }
 }
 
-internal data class Parts(
+internal data class Clauses(
     val select: SelectClause? = null,
     val from: FromClause? = null,
     val joins: List<JoinClause> = emptyList(),
@@ -62,68 +62,84 @@ internal data class Parts(
 )
 
 class QueryContext(val vendor: Vendor, val style: QueryStyle) {
-  internal var parts = Parts()
+  internal var clauses = Clauses()
 
   fun select(clause: SelectClause): SelectStep {
-    check(parts.select == null) { "SELECT clause is already defined" }
-    parts = parts.copy(select = clause)
+    check(clauses.select == null) { "SELECT clause is already defined" }
+    clauses = clauses.copy(select = clause)
     return SelectStep(this)
   }
 
   fun from(clause: FromClause): FromStep {
-    check(parts.from == null) { "FROM clause is already defined" }
-    parts = parts.copy(from = clause)
+    check(clauses.from == null) { "FROM clause is already defined" }
+    clauses = clauses.copy(from = clause)
     return FromStep(this)
   }
 
   fun join(clause: JoinClause): JoinStep {
-    parts = parts.copy(joins = parts.joins + clause)
+    clauses = clauses.copy(joins = clauses.joins + clause)
     return JoinStep(this)
   }
 
   fun join(clauses: List<JoinClause>): JoinStep {
-    parts = parts.copy(joins = parts.joins + clauses)
+    this.clauses = this.clauses.copy(joins = this.clauses.joins + clauses)
     return JoinStep(this)
   }
 
   fun where(clause: WhereClause): WhereStep {
-    check(parts.where == null) { "WHERE clause is already defined" }
-    parts = parts.copy(where = clause)
+    check(clauses.where == null) { "WHERE clause is already defined" }
+    clauses = clauses.copy(where = clause)
     return WhereStep(this)
   }
 
   fun groupBy(clause: GroupByClause): GroupByStep {
-    check(parts.groupBy == null) { "GROUP BY clause is already defined" }
-    parts = parts.copy(groupBy = clause)
+    check(clauses.groupBy == null) { "GROUP BY clause is already defined" }
+    clauses = clauses.copy(groupBy = clause)
     return GroupByStep(this)
   }
 
   fun having(clause: HavingClause): HavingStep {
-    check(parts.having == null) { "HAVING clause is already defined" }
-    parts = parts.copy(having = clause)
+    check(clauses.having == null) { "HAVING clause is already defined" }
+    clauses = clauses.copy(having = clause)
     return HavingStep(this)
   }
 
   fun orderBy(clause: OrderByClause): OrderByStep {
-    check(parts.orderBy == null) { "ORDER BY clause is already defined" }
-    parts = parts.copy(orderBy = clause)
+    check(clauses.orderBy == null) { "ORDER BY clause is already defined" }
+    clauses = clauses.copy(orderBy = clause)
     return OrderByStep(this)
   }
 
   fun limit(clause: LimitClause): LimitStep {
-    check(parts.limit == null) { "LIMIT clause is already defined" }
-    parts = parts.copy(limit = clause)
+    check(clauses.limit == null) { "LIMIT clause is already defined" }
+    clauses = clauses.copy(limit = clause)
     return LimitStep(this)
   }
 
   fun offset(clause: OffsetClause): OffsetStep {
-    check(parts.offset == null) { "OFFSET clause is already defined" }
-    parts = parts.copy(offset = clause)
+    check(clauses.offset == null) { "OFFSET clause is already defined" }
+    clauses = clauses.copy(offset = clause)
     return OffsetStep(this)
   }
 }
 
 interface QueryClause : Printable
+
+interface ClauseExpression {
+  fun printOn(clause: Clause): Printable
+}
+
+enum class Clause {
+  SELECT,
+  FROM,
+  JOIN,
+  WHERE,
+  GROUP_BY,
+  HAVING,
+  ORDER_BY,
+  LIMIT,
+  OFFSET,
+}
 
 interface QueryStep {
   val context: QueryContext

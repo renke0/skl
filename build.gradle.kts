@@ -54,24 +54,3 @@ tasks.withType<Detekt>().configureEach {
     sarif.required.set(true)
   }
 }
-
-tasks.register("installGitHooks") {
-  doLast {
-    val hooksDir = file("${rootProject.rootDir}/.githooks")
-    val gitHooksDir = file("${rootProject.rootDir}/.git/hooks")
-
-    if (gitHooksDir.exists()) {
-      hooksDir.listFiles()?.forEach { hookFile ->
-        val targetFile = File(gitHooksDir, hookFile.name)
-        hookFile.copyTo(targetFile, overwrite = true)
-        targetFile.setExecutable(true)
-        println("Installed git hook: ${hookFile.name}")
-      }
-    } else {
-      println("Git hooks directory not found. Make sure this is a git repository.")
-    }
-  }
-}
-
-// Run installGitHooks task during project setup
-tasks.named("build") { dependsOn("installGitHooks") }

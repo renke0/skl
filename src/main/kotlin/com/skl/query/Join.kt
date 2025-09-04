@@ -5,37 +5,31 @@ import com.skl.printer.QueryStringBuilder
 @Suppress("MemberVisibilityCanBePrivate")
 class JoinClause(
     val type: JoinType,
-    val source: FromArgument,
+    val expression: JoinExpression,
     val predicate: Predicate? = null,
 ) : QueryClause {
   override fun printTo(qb: QueryStringBuilder): QueryStringBuilder =
-      qb.print(type.keyword)
-          .space()
-          .print(source)
-          .printIfNotNull(predicate, { space().print(Keyword.ON).space().print(it) })
+      qb.print(type.keyword).space().print(expression.printOn(Clause.JOIN)).printIfNotNull(
+          predicate) {
+            space().print(Keyword.ON).space().print(it)
+          }
 }
 
 class JoinBuilder internal constructor(private val type: JoinType) {
-  private lateinit var source: FromArgument
+  private lateinit var source: JoinExpression
   private var predicate: Predicate? = null
 
   infix fun JoinExpression.on(predicateBlock: () -> Predicate): JoinBuilder {
     check(type != JoinType.CROSS) { "CROSS JOIN does not support ON condition" }
-    source = asSource()
+    source = this
     predicate = predicateBlock()
     return this@JoinBuilder
   }
 
   operator fun JoinExpression.invoke(): JoinBuilder {
-    source = asSource()
+    source = this
     return this@JoinBuilder
   }
-
-  private fun JoinExpression.asSource() =
-      when (this) {
-        is Table<*> -> FromTable(this)
-        is AliasedTable<*> -> FromAliasedTable(this)
-      }
 
   internal fun build(): JoinClause = JoinClause(type, source, predicate)
 }
@@ -64,7 +58,7 @@ interface JoinSupport : QueryStep {
       context.join(JoinBuilder(type).block().build())
 }
 
-sealed interface JoinExpression
+sealed interface JoinExpression : FromExpression
 
 enum class JoinType(val keyword: Keyword) {
   JOIN(Keyword.JOIN),

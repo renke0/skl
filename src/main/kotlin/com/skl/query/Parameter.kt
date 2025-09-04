@@ -1,5 +1,6 @@
 package com.skl.query
 
+import com.skl.printer.Printable
 import com.skl.printer.QueryStringBuilder
 
 class Parameter(val name: String? = null) :
@@ -13,4 +14,12 @@ class Parameter(val name: String? = null) :
   override fun printTo(qb: QueryStringBuilder): QueryStringBuilder = qb.parameter(name)
 
   override fun term(): Term = this
+
+  override fun printOn(clause: Clause): Printable =
+      when (clause) {
+        Clause.SELECT,
+        Clause.LIMIT,
+        Clause.OFFSET -> this
+        else -> error("Parameter cannot be used in $clause")
+      }
 }
