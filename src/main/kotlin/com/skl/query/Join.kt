@@ -1,64 +1,49 @@
 package com.skl.query
 
-import com.skl.expr.Expr
-import com.skl.model.AliasedTable
-import com.skl.model.Table
-import com.skl.sql.RenderContext
+import com.skl.printer.QueryStringBuilder
 
+@Suppress("MemberVisibilityCanBePrivate")
 class JoinClause(
     val type: JoinType,
-    val table: Table,
-    val alias: String? = null,
-    val condition: Expr? = null,
+    val source: FromArgument,
+    val predicate: Predicate? = null,
 ) : QueryClause {
-  override fun appendTo(sb: StringBuilder, ctx: RenderContext) {
-    sb.append(" ").append(type.sql).append(" ").append(table.name)
-    if (!alias.isNullOrBlank()) sb.append(" ").append(alias)
-    if (condition != null && type != JoinType.CROSS) {
-      sb.append(" ON ")
-      condition.toSql(sb, ctx)
-    }
-  }
+  override fun printTo(qb: QueryStringBuilder): QueryStringBuilder =
+      qb.print(type.keyword)
+          .space()
+          .print(source)
+          .printIfNotNull(predicate, { space().print(Keyword.ON).space().print(it) })
 }
 
 class JoinBuilder internal constructor(private val type: JoinType) {
-  private lateinit var table: Table
-  private var alias: String? = null
-  private var condition: Expr? = null
+  private lateinit var source: FromArgument
+  private var predicate: Predicate? = null
 
-  infix fun Table.on(conditionBlock: () -> Expr): JoinBuilder {
+  infix fun JoinExpression.on(predicateBlock: () -> Predicate): JoinBuilder {
     check(type != JoinType.CROSS) { "CROSS JOIN does not support ON condition" }
-    this@JoinBuilder.table = this
-    this@JoinBuilder.condition = conditionBlock()
+    source = asSource()
+    predicate = predicateBlock()
     return this@JoinBuilder
   }
 
-  infix fun AliasedTable.on(conditionBlock: () -> Expr): JoinBuilder {
-    check(type != JoinType.CROSS) { "CROSS JOIN does not support ON condition" }
-    this@JoinBuilder.table = this.table
-    this@JoinBuilder.alias = this.alias
-    this@JoinBuilder.condition = conditionBlock()
+  operator fun JoinExpression.invoke(): JoinBuilder {
+    source = asSource()
     return this@JoinBuilder
   }
 
-  operator fun Table.invoke(): JoinBuilder {
-    this@JoinBuilder.table = this
-    return this@JoinBuilder
-  }
+  private fun JoinExpression.asSource() =
+      when (this) {
+        is Table<*> -> FromTable(this)
+        is AliasedTable<*> -> FromAliasedTable(this)
+      }
 
-  operator fun AliasedTable.invoke(): JoinBuilder {
-    this@JoinBuilder.table = this.table
-    this@JoinBuilder.alias = this.alias
-    return this@JoinBuilder
-  }
-
-  internal fun build(): JoinClause = JoinClause(type, table, alias, condition)
+  internal fun build(): JoinClause = JoinClause(type, source, predicate)
 }
 
 class JoinStep internal constructor(override val context: QueryContext) :
     JoinSupport, WhereSupport, GroupBySupport, OrderBySupport
 
-interface JoinSupport : QuerySupport {
+interface JoinSupport : QueryStep {
   /**
    * The `join` method provides SQL-like syntax for convenience. It functions identically to
    * `innerJoin`, performing an INNER JOIN operation.
@@ -79,11 +64,13 @@ interface JoinSupport : QuerySupport {
       context.join(JoinBuilder(type).block().build())
 }
 
-enum class JoinType(val sql: String) {
-  JOIN("JOIN"),
-  INNER("INNER JOIN"),
-  LEFT("LEFT JOIN"),
-  RIGHT("RIGHT JOIN"),
-  FULL("FULL JOIN"),
-  CROSS("CROSS JOIN"),
+sealed interface JoinExpression
+
+enum class JoinType(val keyword: Keyword) {
+  JOIN(Keyword.JOIN),
+  INNER(Keyword.INNER_JOIN),
+  LEFT(Keyword.LEFT_JOIN),
+  RIGHT(Keyword.RIGHT_JOIN),
+  FULL(Keyword.FULL_JOIN),
+  CROSS(Keyword.CROSS_JOIN),
 }
