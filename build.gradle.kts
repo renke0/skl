@@ -4,6 +4,7 @@ plugins {
   kotlin("jvm") version "2.1.10"
   id("com.diffplug.spotless") version "7.2.1"
   id("io.gitlab.arturbosch.detekt") version "1.23.5"
+  id("io.kotest") version "6.0.1"
   id("org.jetbrains.kotlinx.kover") version "0.9.1"
 }
 
@@ -15,7 +16,10 @@ repositories { mavenCentral() }
 
 dependencies {
   implementation("com.github.vertical-blank:sql-formatter:2.0.5")
-  testImplementation(kotlin("test"))
+
+  testImplementation("io.kotest:kotest-framework-engine:6.0.1")
+  testImplementation("io.kotest:kotest-runner-junit5:6.0.1")
+
   detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.8")
 }
 

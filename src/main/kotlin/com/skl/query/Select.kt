@@ -1,72 +1,75 @@
 package com.skl.query
 
-import com.skl.model.AliasedTable
-import com.skl.model.Field
-import com.skl.model.Table
-import com.skl.query.Selectable.STAR
-import com.skl.sql.RenderContext
+import com.skl.printer.Printable
+import com.skl.printer.QueryStringBuilder
 
-class SelectClause(val items: List<SelectItem>) : QueryClause {
-  override fun appendTo(sb: StringBuilder, ctx: RenderContext) {
-    sb.append("SELECT ")
-    if (items.isEmpty()) {
-      sb.append("*")
-    } else {
-      sb.append(items.joinToString(", ") { it.toSql(ctx) })
-    }
-  }
-}
+class SelectClause(val selected: List<SelectArgument>) : QueryClause {
+  val keyword = Keyword.SELECT
 
-class SelectStep internal constructor(val context: QueryContext) {
-  fun from(block: () -> Any): FromStep =
-      when (val result = block()) {
-        is AliasedTable -> context.from(FromClause(result.table, result.alias))
-        is Table -> context.from(FromClause(result))
-        else ->
-            error(
-                "from { ... } must return Table or AliasedTable, got: ${result::class.simpleName}",
-            )
+  override fun printTo(qb: QueryStringBuilder): QueryStringBuilder =
+      qb.print(keyword).space().let {
+        if (selected.isEmpty()) it.append("*") else it.printList(selected)
       }
 }
 
-interface Selectable {
-  object STAR : Selectable {
-    override fun toString(): String = "*"
-  }
+class SelectStep internal constructor(override val context: QueryContext) :
+    FromSupport, WhereSupport
+
+interface SelectSupport : QueryStep {
+  fun select(block: () -> List<SelectExpression>): SelectStep =
+      context.select(
+          SelectClause(
+              block().map {
+                when (it) {
+                  STAR -> SelectStar
+                  is Column -> SelectColumn(it)
+                  is Table<*> -> SelectTable(it)
+                  is AliasedTable<*> -> SelectAliasedTable(it)
+                  is AliasedTerm<*> -> SelectAliased(it)
+                  is Function -> SelectFunction(it)
+                  is LiteralTerm -> SelectLiteral(it)
+                  is Parameter -> SelectParameter(it)
+                }
+              },
+          ),
+      )
 }
 
-sealed class SelectItem {
-  abstract fun toSql(ctx: RenderContext): String
+sealed interface SelectExpression
 
-  data class FieldItem(val field: Field<*>) : SelectItem() {
-    override fun toSql(ctx: RenderContext): String = field.fq(ctx)
-  }
+sealed interface SelectArgument : Printable
 
-  data class TableAllFields(val table: Table) : SelectItem() {
-    override fun toSql(ctx: RenderContext): String = "${ctx.nameFor(table)}.*"
-  }
-
-  data object AllFields : SelectItem() {
-    override fun toSql(ctx: RenderContext): String = "*"
-  }
+data object SelectStar : SelectArgument {
+  override fun printTo(qb: QueryStringBuilder): QueryStringBuilder = qb.append("*")
 }
 
-fun select(vararg items: Selectable): SelectStep {
-  val selectItems =
-      when {
-        items.isEmpty() -> listOf(SelectItem.AllFields)
-        else ->
-            items.map { item ->
-              when (item) {
-                is Field<*> -> SelectItem.FieldItem(item)
-                is Table -> SelectItem.TableAllFields(item)
-                is STAR -> SelectItem.AllFields
-                else ->
-                    error(
-                        "Select items must be Field, Table, or STAR, got: ${item::class.simpleName}",
-                    )
-              }
-            }
-      }
-  return QueryContext.select(SelectClause(selectItems))
+data class SelectColumn(val column: Column) : SelectArgument {
+  override fun printTo(qb: QueryStringBuilder): QueryStringBuilder = qb.print(column.term())
+}
+
+data class SelectAliased(val aliased: AliasedTerm<*>) : SelectArgument {
+  override fun printTo(qb: QueryStringBuilder): QueryStringBuilder =
+      qb.print(aliased.expression.term()).space().print(Keyword.AS).space().append(aliased.alias)
+}
+
+data class SelectTable(val table: Table<*>) : SelectArgument {
+  override fun printTo(qb: QueryStringBuilder): QueryStringBuilder =
+      qb.append(qb.ctx.aliasFor(table) ?: table.name()).dotStar()
+}
+
+data class SelectAliasedTable(val table: AliasedTable<*>) : SelectArgument {
+  override fun printTo(qb: QueryStringBuilder): QueryStringBuilder =
+      qb.append(table.alias).dotStar()
+}
+
+data class SelectFunction(val function: Function) : SelectArgument {
+  override fun printTo(qb: QueryStringBuilder): QueryStringBuilder = qb.print(function)
+}
+
+data class SelectLiteral(val literal: LiteralTerm) : SelectArgument {
+  override fun printTo(qb: QueryStringBuilder): QueryStringBuilder = qb.print(literal)
+}
+
+data class SelectParameter(val parameter: Parameter) : SelectArgument {
+  override fun printTo(qb: QueryStringBuilder): QueryStringBuilder = qb.print(parameter)
 }

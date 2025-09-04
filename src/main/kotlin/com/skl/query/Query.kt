@@ -3,34 +3,33 @@ package com.skl.query
 import com.github.vertical_blank.sqlformatter.SqlFormatter
 import com.github.vertical_blank.sqlformatter.core.FormatConfig
 import com.github.vertical_blank.sqlformatter.languages.Dialect
-import com.skl.model.Table
-import com.skl.sql.RenderContext
+import com.skl.printer.Printable
+import com.skl.printer.QueryStringBuilder
+import com.skl.printer.QueryStyle
+import com.skl.printer.RenderContext
+import com.skl.vendor.Vendor
 
 class Query(private val context: QueryContext) {
-
   fun print(): String {
     with(context.parts) {
-      val sb = StringBuilder()
-      val aliases = mutableMapOf<Table, String>()
-      from?.alias?.let { aliases[from.table] = it }
-      joins.forEach { join -> join.alias?.let { aliases[join.table] = it } }
+      val aliases = collectAliases()
 
-      val ctx = RenderContext(aliases)
-      select.appendTo(sb, ctx)
-      from?.appendTo(sb, ctx)
-      joins.forEach { it.appendTo(sb, ctx) }
-      where?.appendTo(sb, ctx)
-      groupBy?.appendTo(sb, ctx)
-      having?.appendTo(sb, ctx)
-      orderBy?.appendTo(sb, ctx)
-      limit?.appendTo(sb, ctx)
-      offset?.appendTo(sb, ctx)
-      return sb.toString()
+      val ctx = RenderContext(aliases, context)
+      val sb = QueryStringBuilder(ctx)
+
+      val clauses =
+          listOf(select, from)
+              .plus(joins)
+              .plus(listOf(where, groupBy, having, orderBy, limit, offset))
+              .filterNotNull()
+
+      return sb.printList(clauses, separator = " ").build()
     }
   }
 
   fun prettyPrint(): String =
       SqlFormatter.of(Dialect.TSql)
+          .extend { cfg -> cfg.plusNamedPlaceholderTypes(":", "$") }
           .format(
               print(),
               FormatConfig.builder()
@@ -40,10 +39,18 @@ class Query(private val context: QueryContext) {
                   .linesBetweenQueries(2)
                   .build(),
           )
+
+  private fun collectAliases(): List<Pair<TableLike, String>> =
+      context.parts.let {
+        listOf(it.from?.source)
+            .plus(it.joins.map { join -> join.source })
+            .filterIsInstance<FromAliasedTable>()
+            .map { from -> from.aliasedTable.table to from.aliasedTable.alias }
+      }
 }
 
 internal data class Parts(
-    val select: SelectClause,
+    val select: SelectClause? = null,
     val from: FromClause? = null,
     val joins: List<JoinClause> = emptyList(),
     val where: WhereClause? = null,
@@ -54,11 +61,13 @@ internal data class Parts(
     val offset: OffsetClause? = null
 )
 
-class QueryContext private constructor(select: SelectClause) {
-  internal var parts = Parts(select = select)
+class QueryContext(val vendor: Vendor, val style: QueryStyle) {
+  internal var parts = Parts()
 
-  companion object {
-    fun select(select: SelectClause): SelectStep = SelectStep(QueryContext(select))
+  fun select(clause: SelectClause): SelectStep {
+    check(parts.select == null) { "SELECT clause is already defined" }
+    parts = parts.copy(select = clause)
+    return SelectStep(this)
   }
 
   fun from(clause: FromClause): FromStep {
@@ -114,12 +123,14 @@ class QueryContext private constructor(select: SelectClause) {
   }
 }
 
-interface QueryClause {
-  fun appendTo(sb: StringBuilder, ctx: RenderContext)
-}
+interface QueryClause : Printable
 
-interface QuerySupport {
+interface QueryStep {
   val context: QueryContext
 
-  fun toQuery(): Query = Query(context)
+  fun query(): Query = Query(context)
+
+  fun str(): String = query().print()
+
+  fun pretty(): String = query().prettyPrint()
 }

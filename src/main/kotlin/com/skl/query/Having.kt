@@ -1,18 +1,17 @@
 package com.skl.query
 
-import com.skl.expr.Expr
-import com.skl.sql.RenderContext
+import com.skl.printer.QueryStringBuilder
 
-class HavingClause(val expression: Expr) : QueryClause {
-  override fun appendTo(sb: StringBuilder, ctx: RenderContext) {
-    sb.append(" HAVING ")
-    expression.toSql(sb, ctx)
-  }
+class HavingClause(val predicate: Predicate) : QueryClause {
+  val keyword = Keyword.HAVING
+
+  override fun printTo(qb: QueryStringBuilder): QueryStringBuilder =
+      qb.print(keyword).space().print(predicate)
 }
 
 class HavingStep internal constructor(override val context: QueryContext) :
     OrderBySupport, LimitSupport
 
-interface HavingSupport : QuerySupport {
-  fun having(block: () -> Expr): HavingStep = context.having(HavingClause(block()))
+interface HavingSupport : QueryStep {
+  fun having(block: () -> Predicate): HavingStep = context.having(HavingClause(block()))
 }

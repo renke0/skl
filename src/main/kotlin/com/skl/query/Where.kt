@@ -1,18 +1,17 @@
 package com.skl.query
 
-import com.skl.expr.Expr
-import com.skl.sql.RenderContext
+import com.skl.printer.QueryStringBuilder
 
-class WhereClause(val expression: Expr) : QueryClause {
-  override fun appendTo(sb: StringBuilder, ctx: RenderContext) {
-    sb.append(" WHERE ")
-    expression.toSql(sb, ctx)
-  }
+class WhereClause(val predicate: Predicate) : QueryClause {
+  val keyword = Keyword.WHERE
+
+  override fun printTo(qb: QueryStringBuilder): QueryStringBuilder =
+      qb.print(keyword).space().print(predicate)
 }
 
 class WhereStep internal constructor(override val context: QueryContext) :
     GroupBySupport, OrderBySupport, LimitSupport
 
-interface WhereSupport : QuerySupport {
-  fun where(block: () -> Expr): WhereStep = context.where(WhereClause(block()))
+interface WhereSupport : QueryStep {
+  fun where(block: () -> Predicate): WhereStep = context.where(WhereClause(block()))
 }
