@@ -4,6 +4,13 @@ import com.skl.query.Keyword
 
 interface Printable {
   fun printTo(qb: QueryStringBuilder): QueryStringBuilder
+
+  companion object {
+    fun of(block: (qb: QueryStringBuilder) -> QueryStringBuilder): Printable =
+        object : Printable {
+          override fun printTo(qb: QueryStringBuilder): QueryStringBuilder = block(qb)
+        }
+  }
 }
 
 class QueryStringBuilder(val ctx: RenderContext) {

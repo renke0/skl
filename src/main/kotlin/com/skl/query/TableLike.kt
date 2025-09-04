@@ -1,6 +1,8 @@
 package com.skl.query
 
-interface TableLike {
+import com.skl.printer.Printable
+
+interface TableLike : SelectExpression, FromExpression, JoinExpression {
   operator fun get(column: Column): Column
 
   fun name(): String
@@ -10,7 +12,7 @@ open class Table<T : Table<T>>(
     val tableName: String,
     val tableSchema: String? = null,
     val tableDatabase: String? = null
-) : TableLike, SelectExpression, FromExpression, JoinExpression {
+) : TableLike {
   private val columns = mutableListOf<Column>()
 
   fun column(name: String): Column {
@@ -27,6 +29,14 @@ open class Table<T : Table<T>>(
   override fun name(): String =
       listOfNotNull(tableDatabase, tableSchema, tableName).joinToString(".")
 
+  override fun printOn(clause: Clause): Printable =
+      when (clause) {
+        Clause.SELECT -> Printable.of { qb -> qb.append(qb.ctx.aliasFor(this) ?: name()).dotStar() }
+        Clause.FROM,
+        Clause.JOIN -> Printable.of { qb -> qb.append(name()) }
+        else -> error("Table cannot be used in $clause")
+      }
+
   @Suppress("UNCHECKED_CAST")
   infix fun `as`(alias: String): AliasedTable<T> = AliasedTable(this as T, alias)
 }
@@ -36,4 +46,12 @@ data class AliasedTable<T : Table<T>>(val table: T, val alias: String) :
   override fun get(column: Column): Column = table[column].copy(owner = this)
 
   override fun name(): String = alias
+
+  override fun printOn(clause: Clause): Printable =
+      when (clause) {
+        Clause.SELECT -> Printable.of { qb -> qb.append(alias).dotStar() }
+        Clause.FROM,
+        Clause.JOIN -> Printable.of { qb -> qb.append(table.name()).space().append(alias) }
+        else -> error("Aliased table cannot be used in $clause")
+      }
 }

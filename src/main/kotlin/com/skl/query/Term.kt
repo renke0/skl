@@ -12,6 +12,12 @@ sealed interface Term : Printable
 
 data object STAR : Term, SelectExpression {
   override fun printTo(qb: QueryStringBuilder): QueryStringBuilder = qb.append("*")
+
+  override fun printOn(clause: Clause): Printable =
+      when (clause) {
+        Clause.SELECT -> this
+        else -> error("STAR cannot be used in $clause")
+      }
 }
 
 data class TermList(val terms: List<Term>) : Term {
@@ -26,6 +32,18 @@ data class TermList(val terms: List<Term>) : Term {
 class AliasedTerm<T : TermExpression>(val alias: String, val expression: T) :
     TermExpression, SelectExpression, GroupByExpression, OrderByExpression {
   override fun term(): Term = expression.term()
+
+  override fun printOn(clause: Clause): Printable =
+      when (clause) {
+        Clause.SELECT ->
+            Printable.of { qb ->
+              qb.print(expression.term()).space().print(Keyword.AS).space().append(alias)
+            }
+
+        Clause.GROUP_BY,
+        Clause.ORDER_BY -> Printable.of { qb -> qb.append(alias) }
+        else -> error("Aliased term cannot be used in $clause")
+      }
 }
 
 sealed interface TermExpression {

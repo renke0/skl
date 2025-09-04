@@ -16,12 +16,27 @@ sealed interface Function : Printable, SelectExpression, OrderByExpression, Term
 class AggregateFunction(
     override val name: String,
     override vararg val arguments: Term,
-) : Function
+) : Function {
+  override fun printOn(clause: Clause): Printable =
+      when (clause) {
+        Clause.SELECT,
+        Clause.ORDER_BY -> this
+        else -> error("Aggregate function cannot be used in $clause")
+      }
+}
 
 class ScalarFunction(
     override val name: String,
     override vararg val arguments: Term,
-) : Function, GroupByExpression
+) : Function, GroupByExpression {
+  override fun printOn(clause: Clause): Printable =
+      when (clause) {
+        Clause.SELECT,
+        Clause.ORDER_BY,
+        Clause.GROUP_BY -> this
+        else -> error("Scalar function cannot be used in $clause")
+      }
+}
 
 class FunctionTerm(val function: Function) : Term {
   override fun printTo(qb: QueryStringBuilder): QueryStringBuilder = qb.print(function)
