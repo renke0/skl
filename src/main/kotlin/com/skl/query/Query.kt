@@ -12,9 +12,10 @@ import com.skl.vendor.Vendor
 class Query(private val context: QueryContext) {
   fun print(): String {
     with(context.clauses) {
-      val aliases = collectAliases()
+      val tableAliases = collectTableAliases()
+      val termAliases = collectTermAliases()
 
-      val ctx = RenderContext(aliases, context)
+      val ctx = RenderContext(tableAliases, termAliases, context)
       val sb = QueryStringBuilder(ctx)
 
       val orderedClauses =
@@ -40,13 +41,26 @@ class Query(private val context: QueryContext) {
                   .build(),
           )
 
-  private fun collectAliases(): List<Pair<TableLike, String>> =
-      context.clauses.let {
-        listOf(it.from?.expression)
-            .plus(it.joins.map { join -> join.expression })
-            .filterIsInstance<AliasedTable<*>>()
-            .map { from -> from.table to from.alias }
-      }
+  private fun collectTableAliases(): List<Aliased<TableLike>> =
+      ensureSingleAlias(
+          context.clauses.let {
+            listOf(it.from?.expression)
+                .plus(it.joins.map { join -> join.expression })
+                .filterIsInstance<Aliased<TableLike>>()
+          })
+
+  private fun collectTermAliases(): List<Aliased<TermExpression>> =
+      ensureSingleAlias(
+          context.clauses.select
+              ?.expressions
+              ?.filterIsInstance<Aliased<TermExpression>>()
+              .orEmpty())
+
+  private fun <T> ensureSingleAlias(aliases: List<Aliased<T>>): List<Aliased<T>> {
+    val duplicates = aliases.groupBy { it.alias }.filter { it.value.size > 1 }
+    check(duplicates.isEmpty()) { "Duplicate aliases found: ${duplicates.keys.joinToString()}" }
+    return aliases
+  }
 }
 
 internal data class Clauses(

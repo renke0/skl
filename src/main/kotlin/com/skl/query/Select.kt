@@ -2,6 +2,7 @@ package com.skl.query
 
 import com.skl.printer.QueryStringBuilder
 
+@Suppress("MemberVisibilityCanBePrivate")
 class SelectClause(val expressions: List<SelectExpression>) : QueryClause {
   val keyword = Keyword.SELECT
 

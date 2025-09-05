@@ -29,20 +29,40 @@ data class TermList(val terms: List<Term>) : Term {
       qb.append("(").printList(terms).append(")")
 }
 
-class AliasedTerm<T : TermExpression>(val alias: String, val expression: T) :
-    TermExpression, SelectExpression, GroupByExpression, OrderByExpression {
-  override fun term(): Term = expression.term()
+data class Alias<T : Term>(val alias: String, val term: T) : Term {
+  override fun printTo(qb: QueryStringBuilder): QueryStringBuilder = qb.append(alias)
+}
+
+data class AliasedTerm<T : TermExpression>(override val alias: String, val term: T) :
+    Aliased<T>, TermExpression, SelectExpression, GroupByExpression, OrderByExpression {
+  override val value = term
+
+  override fun term(): Term = Alias(alias, term.term())
 
   override fun printOn(clause: Clause): Printable =
       when (clause) {
         Clause.SELECT ->
             Printable.of { qb ->
-              qb.print(expression.term()).space().print(Keyword.AS).space().append(alias)
+              qb.print(term.term()).space().print(Keyword.AS).space().append(alias)
             }
 
         Clause.GROUP_BY,
         Clause.ORDER_BY -> Printable.of { qb -> qb.append(alias) }
         else -> error("Aliased term cannot be used in $clause")
+      }
+}
+
+data class AliasRef(val alias: String) : Term {
+  override fun printTo(qb: QueryStringBuilder): QueryStringBuilder =
+      qb.print(qb.ctx.aliasedTerm(alias)?.term() ?: error("Unknown alias: $alias"))
+}
+
+data class AliasRefTerm(val alias: String) : TermExpression, GroupByExpression, OrderByExpression {
+  override fun term(): Term = AliasRef(alias)
+
+  override fun printOn(clause: Clause): Printable =
+      Printable.of { qb ->
+        qb.ctx.aliasedTerm(alias)?.printOn(clause)?.let(qb::print) ?: error("Unknown alias: $alias")
       }
 }
 

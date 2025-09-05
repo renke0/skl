@@ -2,6 +2,7 @@ package com.skl.query
 
 import com.skl.printer.QueryStringBuilder
 
+@Suppress("MemberVisibilityCanBePrivate")
 class HavingClause(val predicate: Predicate) : QueryClause {
   val keyword = Keyword.HAVING
 

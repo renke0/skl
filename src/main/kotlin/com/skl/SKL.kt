@@ -1,6 +1,7 @@
 package com.skl
 
 import com.skl.printer.QueryStyle
+import com.skl.query.AliasRefTerm
 import com.skl.query.QueryContext
 import com.skl.query.SelectExpression
 import com.skl.query.SelectStep
@@ -25,6 +26,8 @@ interface EntryPoint {
     val entryPoint = SelectEntryPoint()
     return entryPoint.select { selected.toList() }
   }
+
+  fun alias(name: String) = AliasRefTerm(name)
 }
 
 private class SelectEntryPoint : SelectSupport {

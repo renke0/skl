@@ -3,6 +3,7 @@ package com.skl.query
 import com.skl.printer.Printable
 import com.skl.printer.QueryStringBuilder
 
+@Suppress("MemberVisibilityCanBePrivate")
 class OrderByClause(val orders: List<OrderItem>) : QueryClause {
   init {
     require(orders.isNotEmpty()) { "At least one column must be specified" }
@@ -15,7 +16,7 @@ class OrderByClause(val orders: List<OrderItem>) : QueryClause {
 }
 
 class OrderByStep internal constructor(override val context: QueryContext) :
-    QueryStep, LimitSupport
+    QueryStep, LimitSupport, OffsetSupport
 
 interface OrderBySupport : QueryStep {
   fun orderBy(vararg orders: OrderByExpression): OrderByStep =

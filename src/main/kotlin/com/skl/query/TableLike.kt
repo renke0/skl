@@ -31,7 +31,8 @@ open class Table<T : Table<T>>(
 
   override fun printOn(clause: Clause): Printable =
       when (clause) {
-        Clause.SELECT -> Printable.of { qb -> qb.append(qb.ctx.aliasFor(this) ?: name()).dotStar() }
+        Clause.SELECT ->
+            Printable.of { qb -> qb.append(qb.ctx.aliasFor(this)?.alias ?: name()).dotStar() }
         Clause.FROM,
         Clause.JOIN -> Printable.of { qb -> qb.append(name()) }
         else -> error("Table cannot be used in $clause")
@@ -41,8 +42,11 @@ open class Table<T : Table<T>>(
   infix fun `as`(alias: String): AliasedTable<T> = AliasedTable(this as T, alias)
 }
 
-data class AliasedTable<T : Table<T>>(val table: T, val alias: String) :
-    TableLike, SelectExpression, FromExpression, JoinExpression {
+data class AliasedTable<T : Table<T>>(val table: T, override val alias: String) :
+    Aliased<Table<T>>, TableLike, SelectExpression, FromExpression, JoinExpression {
+
+  override val value = table
+
   override fun get(column: Column): Column = table[column].copy(owner = this)
 
   override fun name(): String = alias
@@ -52,6 +56,6 @@ data class AliasedTable<T : Table<T>>(val table: T, val alias: String) :
         Clause.SELECT -> Printable.of { qb -> qb.append(alias).dotStar() }
         Clause.FROM,
         Clause.JOIN -> Printable.of { qb -> qb.append(table.name()).space().append(alias) }
-        else -> error("Aliased table cannot be used in $clause")
+        else -> error("com.skl.query.Aliased table cannot be used in $clause")
       }
 }

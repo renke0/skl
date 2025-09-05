@@ -10,7 +10,7 @@ class FromClause(val expression: FromExpression) : QueryClause {
 }
 
 class FromStep internal constructor(override val context: QueryContext) :
-    JoinSupport, WhereSupport, GroupBySupport, OrderBySupport, LimitSupport
+    JoinSupport, WhereSupport, GroupBySupport, OrderBySupport, LimitSupport, OffsetSupport
 
 interface FromSupport : QueryStep {
   fun from(block: () -> FromExpression): FromStep = context.from(FromClause(block()))
