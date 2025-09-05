@@ -2,6 +2,7 @@ package com.skl.query
 
 import com.skl.printer.QueryStringBuilder
 
+@Suppress("MemberVisibilityCanBePrivate")
 class WhereClause(val predicate: Predicate) : QueryClause {
   val keyword = Keyword.WHERE
 
@@ -10,7 +11,7 @@ class WhereClause(val predicate: Predicate) : QueryClause {
 }
 
 class WhereStep internal constructor(override val context: QueryContext) :
-    GroupBySupport, OrderBySupport, LimitSupport
+    GroupBySupport, OrderBySupport, LimitSupport, OffsetSupport
 
 interface WhereSupport : QueryStep {
   fun where(block: () -> Predicate): WhereStep = context.where(WhereClause(block()))

@@ -2,6 +2,7 @@ package com.skl.query
 
 import com.skl.printer.QueryStringBuilder
 
+@Suppress("MemberVisibilityCanBePrivate")
 class GroupByClause(val expressions: List<GroupByExpression>) : QueryClause {
   init {
     require(expressions.isNotEmpty()) { "GROUP BY must have at least one grouping" }

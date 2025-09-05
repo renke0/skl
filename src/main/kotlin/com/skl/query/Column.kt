@@ -19,5 +19,7 @@ data class Column(val owner: TableLike, val name: String) :
 
 data class ColumnTerm(val column: Column) : Term {
   override fun printTo(qb: QueryStringBuilder): QueryStringBuilder =
-      qb.append(qb.ctx.aliasFor(column.owner) ?: column.owner.name()).dot().append(column.name)
+      qb.append(qb.ctx.aliasFor(column.owner)?.alias ?: column.owner.name())
+          .dot()
+          .append(column.name)
 }

@@ -2,6 +2,7 @@ package com.skl.query
 
 import com.skl.printer.QueryStringBuilder
 
+@Suppress("MemberVisibilityCanBePrivate")
 class OffsetClause(val expression: OffsetExpression) : QueryClause {
   val keyword = Keyword.OFFSET
 
