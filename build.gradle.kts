@@ -6,6 +6,7 @@ plugins {
   id("io.gitlab.arturbosch.detekt") version "1.23.5"
   id("io.kotest") version "6.0.1"
   id("org.jetbrains.kotlinx.kover") version "0.9.1"
+  id("com.github.blueboxware.tocme") version "1.8"
 }
 
 group = "com.skl"
@@ -44,6 +45,12 @@ detekt {
   buildUponDefaultConfig = true
   allRules = false
   config.setFrom("$projectDir/detekt.yml")
+}
+
+tocme {
+  bold = false
+  levels = listOf(1, 2, 3, 4)
+  doc("README.md")
 }
 
 tasks.withType<Detekt>().configureEach {
